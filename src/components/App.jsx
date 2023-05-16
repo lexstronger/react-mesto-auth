@@ -29,6 +29,7 @@ function App() {
   const [email, setEmail] = React.useState("");
   const [loggedIn, setLoggedIn] = React.useState(false);
   const [isInfoTooltipOpen, setIsInfoTooltipOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false)
   const [isRegister, setIsRegister] = React.useState({
     status: "",
     message: "",
@@ -58,6 +59,22 @@ function App() {
       })
       .catch((err) => console.log(err));
   }}, [loggedIn]);
+
+  const isOpen = isEditAvatarPopupOpen || isEditProfilePopupOpen || isAddPlacePopupOpen || isImagePopupOpen || isInfoTooltipOpen
+
+  useEffect(() => {
+    function closeByEscape(evt) {
+      if(evt.key === 'Escape') {
+        closeAllPopups();
+      }
+    }
+    if(isOpen) { // навешиваем только при открытии
+      document.addEventListener('keydown', closeByEscape);
+      return () => {
+        document.removeEventListener('keydown', closeByEscape);
+      }
+    }
+  }, [isOpen]) 
 
   function handleEditProfileClick() {
     setIsEditProfilePopupOpen(true);
@@ -108,31 +125,43 @@ function App() {
       .catch((err) => console.log(err));
   }
   function handleUpdateUser(data) {
+    setIsLoading(true);
     api
       .editProfileInfo(data)
       .then((res) => {
         setCurrentUser(res);
         closeAllPopups();
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => {
+        setIsLoading(false);
+      })
   }
   function handleUpdateAvatar(data) {
+    setIsLoading(true);
     api
       .editProfileAvatar(data)
       .then((res) => {
         setCurrentUser(res);
         closeAllPopups();
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => {
+        setIsLoading(false);
+      })
   }
   function handleAddPlaceSubmit(data) {
+    setIsLoading(true);
     api
       .addNewCard(data)
       .then((res) => {
         setCards([res, ...cards]);
         closeAllPopups();
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => {
+        setIsLoading(false);
+      })
   }
   useEffect(() => {
     handleCheckToken();
@@ -166,21 +195,23 @@ function App() {
       .register(email, password)
       .then(() => {
         setInputValue({ email: "", password: "" });
-        setIsInfoTooltipOpen(true);
         setIsRegister({
           status: true,
           message: "Вы успешно зарегистрировались!",
         });
         navigate("/sign-in", { replace: true });
       })
-      .catch((err) => {
-        setIsInfoTooltipOpen(true);
+      .catch((err) => {        
         setIsRegister({
           status: false,
           message: "Что-то пошло не так! Попробуйте еще раз.",
         });
         console.log(err);
-      });
+      })
+      .finally(() => {
+        setIsInfoTooltipOpen(true);
+      })
+      
   }
   function handleLoginUser(evt) {
     evt.preventDefault();
@@ -188,6 +219,7 @@ function App() {
     auth
       .authorize(email, password)
       .then((data) => {
+        localStorage.setItem("jwt", data.token)
         setInputValue({ email: "", password: "" });
         setLoggedIn(true);
         setEmail(email);
@@ -204,6 +236,7 @@ function App() {
       [name]: value,
     });
   }
+
   return (
     <CurrentUserContext.Provider value={currentUser}>
       <div className="page">
@@ -263,18 +296,21 @@ function App() {
             onClose={closeAllPopups}
             onOverlayClose={closeAllPopupsByOverlay}
             onUpdateUser={handleUpdateUser}
+            isLoading={isLoading}
           />
           <AddPlacePopup
             isOpen={isAddPlacePopupOpen}
             onClose={closeAllPopups}
             onOverlayClose={closeAllPopupsByOverlay}
             onAddPlace={handleAddPlaceSubmit}
+            isLoading={isLoading}
           />
           <EditAvatarPopup
             isOpen={isEditAvatarPopupOpen}
             onClose={closeAllPopups}
             onOverlayClose={closeAllPopupsByOverlay}
             onUpdateAvatar={handleUpdateAvatar}
+            isLoading={isLoading}
           />
           <PopupWithForm
             name={"confirm"}

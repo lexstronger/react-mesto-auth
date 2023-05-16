@@ -22,7 +22,7 @@ function EditAvatarPopup(props) {
       isOpen={props.isOpen}
       onClose={props.onClose}
       onOverlayClose={props.onOverlayClose}
-      textButton={"Сохранить"}
+      textButton={props.isLoading ? "Сохранение..." : "Сохранить"}
       onSubmit={handleSubmit}
     >
       <input
